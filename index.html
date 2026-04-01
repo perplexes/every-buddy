@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Every Buddy</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0f;
+    color: #e0e0e0;
+    font-family: 'Berkeley Mono', 'SF Mono', 'Fira Code', monospace;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* --- Header --- */
+  header {
+    padding: 12px 20px;
+    background: #111118;
+    border-bottom: 1px solid #222;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 16px; font-weight: 600; white-space: nowrap; }
+  header h1 span { opacity: 0.4; font-weight: 400; }
+  .seed-display {
+    font-size: 13px;
+    color: #888;
+    font-variant-numeric: tabular-nums;
+  }
+  .seed-display b { color: #ccc; }
+
+  /* --- Search bar --- */
+  .search-bar {
+    padding: 8px 20px;
+    background: #0d0d14;
+    border-bottom: 1px solid #1a1a25;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .search-bar button {
+    padding: 5px 12px;
+    border: 1px solid #333;
+    border-radius: 4px;
+    background: #1a1a25;
+    color: #ccc;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .search-bar button:hover { background: #252535; border-color: #555; }
+  .search-bar button.active { border-color: #f0c040; color: #f0c040; }
+  .search-bar button.legendary { border-color: #f0c040; color: #f0c040; }
+  .search-bar button.epic { border-color: #a855f7; color: #a855f7; }
+  .search-bar button.rare { border-color: #3b82f6; color: #3b82f6; }
+  .search-bar button.shiny { border-color: #fff; color: #fff; text-shadow: 0 0 6px #fff; }
+  .search-bar select, .search-bar input {
+    padding: 5px 8px;
+    border: 1px solid #333;
+    border-radius: 4px;
+    background: #1a1a25;
+    color: #ccc;
+    font-family: inherit;
+    font-size: 12px;
+  }
+  .search-bar label { font-size: 12px; color: #666; }
+  .separator { width: 1px; height: 20px; background: #333; }
+
+  /* --- Main grid --- */
+  .grid-container {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 140px);
+    gap: 6px;
+    padding: 12px 20px;
+    justify-content: center;
+  }
+
+  /* --- Buddy card --- */
+  .buddy {
+    border: 1px solid #222;
+    border-radius: 6px;
+    padding: 8px;
+    background: #111118;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .buddy:hover { border-color: #444; transform: translateY(-1px); }
+  .buddy.common { border-color: #333; }
+  .buddy.uncommon { border-color: #22c55e40; }
+  .buddy.rare { border-color: #3b82f640; }
+  .buddy.epic { border-color: #a855f740; }
+  .buddy.legendary { border-color: #f0c04060; background: #18170e; }
+  .buddy.shiny::after {
+    content: '✨';
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    font-size: 10px;
+  }
+  .buddy .sprite {
+    font-family: 'Berkeley Mono', 'SF Mono', 'Fira Code', 'Menlo', 'Consolas', monospace;
+    font-size: 9px;
+    line-height: 1.15;
+    white-space: pre;
+    text-align: center;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0;
+  }
+  .buddy .info {
+    margin-top: 4px;
+    font-size: 10px;
+    text-align: center;
+  }
+  .buddy .rarity-tag {
+    font-size: 9px;
+    display: block;
+    margin-top: 2px;
+  }
+  .buddy .rarity-tag.common { color: #555; }
+  .buddy .rarity-tag.uncommon { color: #22c55e; }
+  .buddy .rarity-tag.rare { color: #3b82f6; }
+  .buddy .rarity-tag.epic { color: #a855f7; }
+  .buddy .rarity-tag.legendary { color: #f0c040; }
+  .buddy .stats-mini {
+    font-size: 8px;
+    color: #555;
+    margin-top: 2px;
+  }
+  .buddy .seed-num {
+    font-size: 8px;
+    color: #333;
+    margin-top: 2px;
+  }
+
+  /* --- Scrollbar track --- */
+  .scroll-track {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 40px;
+    background: #0a0a0f;
+    border-left: 1px solid #222;
+    cursor: pointer;
+  }
+  .scroll-thumb {
+    position: absolute;
+    right: 4px;
+    width: 32px;
+    min-height: 20px;
+    background: #333;
+    border-radius: 4px;
+    cursor: grab;
+  }
+  .scroll-thumb:hover { background: #444; }
+  .scroll-track .marker {
+    position: absolute;
+    right: 0;
+    width: 40px;
+    height: 2px;
+    pointer-events: none;
+  }
+  .scroll-track .marker.legendary { background: #f0c04040; }
+  .scroll-track .marker.epic { background: #a855f720; }
+
+  /* --- Detail panel --- */
+  .detail-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #000000aa;
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+  }
+  .detail-overlay.open { display: flex; }
+  .detail-card {
+    background: #111118;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 24px;
+    min-width: 320px;
+    max-width: 400px;
+    position: relative;
+  }
+  .detail-card .close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 20px;
+    cursor: pointer;
+  }
+  .detail-card .sprite-large {
+    font-family: 'Berkeley Mono', 'SF Mono', 'Fira Code', 'Menlo', 'Consolas', monospace;
+    font-size: 16px;
+    line-height: 1.2;
+    white-space: pre;
+    text-align: center;
+    margin: 12px 0;
+    letter-spacing: 0;
+  }
+  .detail-card h2 { text-align: center; font-size: 18px; }
+  .detail-card .rarity-large { text-align: center; margin: 4px 0 12px; font-size: 14px; }
+  .detail-card .stat-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0;
+    font-size: 13px;
+  }
+  .detail-card .stat-name { width: 80px; text-align: right; color: #888; }
+  .detail-card .stat-bar {
+    flex: 1;
+    height: 12px;
+    background: #1a1a25;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .detail-card .stat-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s;
+  }
+  .detail-card .stat-val { width: 30px; text-align: right; font-variant-numeric: tabular-nums; }
+  .detail-card .meta {
+    margin-top: 12px;
+    font-size: 11px;
+    color: #555;
+    text-align: center;
+  }
+  .detail-card .use-btn {
+    display: block;
+    margin: 16px auto 0;
+    padding: 8px 20px;
+    border: 1px solid #f0c040;
+    border-radius: 6px;
+    background: transparent;
+    color: #f0c040;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .detail-card .use-btn:hover { background: #f0c04020; }
+
+  /* --- Jump input --- */
+  .jump-group { display: flex; align-items: center; gap: 4px; }
+  .jump-group input {
+    width: 110px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* --- Searching indicator --- */
+  .searching {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 16px;
+    background: #1a1a25;
+    border: 1px solid #333;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #888;
+    display: none;
+    z-index: 50;
+  }
+  .searching.active { display: block; }
+
+  /* --- Setup modal --- */
+  .setup-overlay {
+    position: fixed;
+    inset: 0;
+    background: #000000dd;
+    z-index: 200;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .setup-overlay.hidden { display: none; }
+  .setup-card {
+    background: #111118;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 32px;
+    max-width: 500px;
+    width: 90%;
+  }
+  .setup-card h2 { margin-bottom: 8px; font-size: 20px; }
+  .setup-card p { color: #888; font-size: 13px; margin-bottom: 16px; line-height: 1.5; }
+  .setup-card code {
+    display: block;
+    background: #1a1a25;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: #e0e0e0;
+    margin-bottom: 16px;
+    word-break: break-all;
+    cursor: pointer;
+    position: relative;
+  }
+  .setup-card code:hover { border-color: #555; }
+  .setup-card code::after { content: 'click to copy'; position: absolute; right: 8px; top: 8px; font-size: 10px; color: #555; }
+  .setup-card input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #333;
+    border-radius: 6px;
+    background: #1a1a25;
+    color: #e0e0e0;
+    font-family: monospace;
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+  .setup-card button.go-btn {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #f0c040;
+    border-radius: 6px;
+    background: transparent;
+    color: #f0c040;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .setup-card button.go-btn:hover { background: #f0c04020; }
+  .setup-card button.go-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Every Buddy <span>— 37¹⁵ ≈ 1.5 × 10²³ companions</span></h1>
+  <div class="seed-display">
+    Salt <b id="range-start" style="font-family:monospace">000000000000000</b> – <b id="range-end" style="font-family:monospace">000000000000000</b>
+  </div>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+    <label style="font-size:11px;color:#666">User ID:</label>
+    <input type="text" id="user-id-input" value="" placeholder="paste your accountUuid here"
+      style="font-family:monospace;font-size:11px;width:300px;padding:3px 6px;background:#1a1a25;border:1px solid #333;border-radius:3px;color:#ccc">
+    <button id="btn-help-uid"
+      style="background:none;border:1px solid #444;border-radius:50%;width:18px;height:18px;color:#666;font-size:11px;cursor:pointer;padding:0;line-height:18px" title="How to find your User ID">?</button>
+  </div>
+</header>
+
+<div class="search-bar">
+  <button class="legendary" id="btn-legendary">Find Legendary →</button>
+  <button class="epic" id="btn-epic">Find Epic →</button>
+  <button class="rare" id="btn-rare">Find Rare →</button>
+  <button class="shiny" id="btn-shiny">Find Shiny →</button>
+  <div class="separator"></div>
+  <label>Species:</label>
+  <select id="filter-species">
+    <option value="">Any</option>
+  </select>
+  <label>Direction:</label>
+  <select id="search-dir">
+    <option value="forward">Forward →</option>
+    <option value="backward">← Backward</option>
+  </select>
+  <div class="separator"></div>
+  <div class="jump-group">
+    <label>Jump to salt:</label>
+    <input type="text" id="jump-seed" maxlength="15" placeholder="000000000000000" style="font-family:monospace;width:130px">
+    <button id="btn-jump">Go</button>
+  </div>
+  <div class="jump-group">
+    <label>Random:</label>
+    <button id="btn-random">🎲</button>
+  </div>
+</div>
+
+<div class="setup-overlay" id="setup-overlay">
+  <div class="setup-card">
+    <h2>Every Buddy</h2>
+    <p>Browse all possible Claude Code companion pets. To see <em>your</em> rolls, paste your <strong>accountUuid</strong>.</p>
+    <p>Run this in your terminal to get it:</p>
+    <code id="setup-cmd">python3 -c "import json,os; print(json.load(open(os.path.expanduser('~/.claude.json')))['oauthAccount']['accountUuid'])"</code>
+    <input type="text" id="setup-uid" placeholder="paste your accountUuid here (e.g. a1b2c3d4-...)" autocomplete="off" spellcheck="false">
+    <button class="go-btn" id="setup-go" disabled>Explore</button>
+  </div>
+</div>
+
+<div class="grid-container" id="grid-container">
+  <div id="grid"></div>
+  <div class="scroll-track" id="scroll-track">
+    <div class="scroll-thumb" id="scroll-thumb"></div>
+  </div>
+</div>
+
+<div class="detail-overlay" id="detail-overlay">
+  <div class="detail-card" id="detail-card"></div>
+</div>
+
+<div class="searching" id="searching">Searching...</div>
+
+<script>
+// --- Wyhash (pure JS, matches Bun.hash) ---
+const MASK64 = (1n << 64n) - 1n;
+const S = [0xa0761d6478bd642fn, 0xe7037ed1a0b428dbn, 0x8ebc6af09c88c6e3n, 0x589965cc75374cc3n];
+function _wymum(A, B) { const r = A * B; return [(r & MASK64), (r >> 64n) & MASK64]; }
+function _wymix(A, B) { const [a, b] = _wymum(A & MASK64, B & MASK64); return (a ^ b) & MASK64; }
+function _wyr8(p, i) { let v = 0n; for (let j = 0; j < 8; j++) v |= BigInt(p[i+j]) << BigInt(j*8); return v; }
+function _wyr4(p, i) { let v = 0n; for (let j = 0; j < 4; j++) v |= BigInt(p[i+j]) << BigInt(j*8); return v; }
+function _wyr3(p, i, k) { return (BigInt(p[i]) << 16n) | (BigInt(p[i + (k >>> 1)]) << 8n) | BigInt(p[i + k - 1]); }
+function wyhash(p) {
+  let seed = _wymix(S[0], S[1]);
+  const len = p.length;
+  let a, b;
+  if (len <= 16) {
+    if (len >= 4) {
+      a = ((_wyr4(p, 0) << 32n) | _wyr4(p, ((len >>> 3) << 2))) & MASK64;
+      b = ((_wyr4(p, len - 4) << 32n) | _wyr4(p, len - 4 - ((len >>> 3) << 2))) & MASK64;
+    } else if (len > 0) { a = _wyr3(p, 0, len); b = 0n; }
+    else { a = 0n; b = 0n; }
+  } else {
+    let i = len, off = 0;
+    if (i >= 48) {
+      let s1 = seed, s2 = seed;
+      do {
+        seed = _wymix(_wyr8(p, off) ^ S[1], _wyr8(p, off+8) ^ seed);
+        s1 = _wymix(_wyr8(p, off+16) ^ S[2], _wyr8(p, off+24) ^ s1);
+        s2 = _wymix(_wyr8(p, off+32) ^ S[3], _wyr8(p, off+40) ^ s2);
+        off += 48; i -= 48;
+      } while (i >= 48);
+      seed = (seed ^ s1 ^ s2) & MASK64;
+    }
+    while (i > 16) { seed = _wymix(_wyr8(p, off) ^ S[1], _wyr8(p, off+8) ^ seed); i -= 16; off += 16; }
+    a = _wyr8(p, off+i-16); b = _wyr8(p, off+i-8);
+  }
+  a = (a ^ S[1]) & MASK64; b = (b ^ seed) & MASK64;
+  const [lo, hi] = _wymum(a, b);
+  return _wymix((lo ^ S[0] ^ BigInt(len)) & MASK64, (hi ^ S[1]) & MASK64);
+}
+
+const _encoder = new TextEncoder();
+let _prefixBytes = new Uint8Array(0);
+
+function getUserId() { return document.getElementById('user-id-input')?.value || ""; }
+
+function bunHash(salt) {
+  const saltBytes = _encoder.encode(salt);
+  const buf = new Uint8Array(_prefixBytes.length + saltBytes.length);
+  buf.set(_prefixBytes); buf.set(saltBytes, _prefixBytes.length);
+  return Number(wyhash(buf) & 0xffffffffn) >>> 0;
+}
+
+// --- Salt as base-37 number ---
+const SALT_CHARS = "0123456789abcdefghijklmnopqrstuvwxyz-";
+const BASE = 37n;
+const SALT_LEN = 15;
+
+function saltFromIndex(idx) {
+  idx = BigInt(idx);
+  let s = "";
+  for (let i = 0; i < SALT_LEN; i++) {
+    s = SALT_CHARS[Number(idx % BASE)] + s;
+    idx = idx / BASE;
+  }
+  return s;
+}
+
+function indexFromSalt(salt) {
+  let idx = 0n;
+  for (let i = 0; i < salt.length; i++) {
+    const c = SALT_CHARS.indexOf(salt[i]);
+    if (c < 0) return 0n;
+    idx = idx * BASE + BigInt(c);
+  }
+  return idx;
+}
+
+const MAX_INDEX = BASE ** BigInt(SALT_LEN); // 37^15
+
+// --- Constants ---
+const SPECIES = ["duck","goose","blob","cat","dragon","octopus","owl","penguin","turtle","snail","ghost","axolotl","capybara","cactus","robot","rabbit","mushroom","chonk"];
+const EYES = ["·","✦","×","◉","@","°"];
+const HATS = ["none","crown","tophat","propeller","halo","wizard","beanie","tinyduck"];
+const RARITY_ORDER = ["common","uncommon","rare","epic","legendary"];
+const WEIGHTS = {common:60,uncommon:25,rare:10,epic:4,legendary:1};
+const FLOORS = {common:5,uncommon:15,rare:25,epic:35,legendary:50};
+const STAT_NAMES = ["debugging","patience","chaos","wisdom","snark"];
+const STARS = {common:"★",uncommon:"★★",rare:"★★★",epic:"★★★★",legendary:"★★★★★"};
+const RARITY_COLORS = {common:"#555",uncommon:"#22c55e",rare:"#3b82f6",epic:"#a855f7",legendary:"#f0c040"};
+const STAT_COLORS = {debugging:"#ef4444",patience:"#22c55e",chaos:"#f97316",wisdom:"#3b82f6",snark:"#a855f7"};
+
+// --- Mulberry32 PRNG (matches JS impl in Claude Code) ---
+function mulberry32(seed) {
+  let s = seed | 0;
+  return function() {
+    s = s + 1831565813 | 0;
+    let q = Math.imul(s ^ s >>> 15, 1 | s);
+    q = q + Math.imul(q ^ q >>> 7, 61 | q) ^ q;
+    return ((q ^ q >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function rollSalt(salt) {
+  const seed = bunHash(salt);
+  return { salt, ...rollSeed(seed) };
+}
+
+function rollSeed(seed) {
+  const rng = mulberry32(seed);
+  let r = rng() * 100;
+  let rarity = "common";
+  for (const k of RARITY_ORDER) { r -= WEIGHTS[k]; if (r < 0) { rarity = k; break; } }
+  const species = SPECIES[Math.floor(rng() * SPECIES.length)];
+  const eye = EYES[Math.floor(rng() * EYES.length)];
+  const hat = rarity === "common" ? "none" : HATS[Math.floor(rng() * HATS.length)];
+  const shiny = rng() < 0.01;
+  const floor = FLOORS[rarity];
+  const peakIdx = Math.floor(rng() * STAT_NAMES.length) % STAT_NAMES.length;
+  let dumpIdx = Math.floor(rng() * STAT_NAMES.length) % STAT_NAMES.length;
+  while (dumpIdx === peakIdx) dumpIdx = Math.floor(rng() * STAT_NAMES.length) % STAT_NAMES.length;
+  const stats = {};
+  for (let i = 0; i < STAT_NAMES.length; i++) {
+    const rv = rng();
+    if (i === peakIdx) stats[STAT_NAMES[i]] = Math.min(100, floor + 50 + Math.floor(rv * 30));
+    else if (i === dumpIdx) stats[STAT_NAMES[i]] = Math.max(1, floor - 10 + Math.floor(rv * 15));
+    else stats[STAT_NAMES[i]] = floor + Math.floor(rv * 40);
+  }
+  return { seed, rarity, species, eye, hat, shiny, stats };
+}
+
+// --- Sprites (exact from Claude Code binary) ---
+// Each species has 3 frames, each frame is 5 lines of 12 chars.
+// {E} is replaced with the eye glyph at render time.
+const SPRITES = {"duck":[["            ","    __      ","  <({E} )___  ","   (  ._>   ","    `--'    "],["            ","    __      ","  <({E} )___  ","   (  ._>   ","    `--'~   "],["            ","    __      ","  <({E} )___  ","   (  .__>  ","    `--'    "]],"goose":[["            ","     ({E}>    ","     ||     ","   _(__)_   ","    ^^^^    "],["            ","    ({E}>     ","     ||     ","   _(__)_   ","    ^^^^    "],["            ","     ({E}>>   ","     ||     ","   _(__)_   ","    ^^^^    "]],"blob":[["            ","   .----.   ","  ( {E}  {E} )  ","  (      )  ","   `----'   "],["            ","  .------.  "," (  {E}  {E}  ) "," (        ) ","  `------'  "],["            ","    .--.    ","   ({E}  {E})   ","   (    )   ","    `--'    "]],"cat":[["            ","   /\\_/\\    ","  ( {E}   {E})  ","  (  \u03C9  )   ",'  (")_(")   '],["            ","   /\\_/\\    ","  ( {E}   {E})  ","  (  \u03C9  )   ",'  (")_(")~  '],["            ","   /\\-/\\    ","  ( {E}   {E})  ","  (  \u03C9  )   ",'  (")_(")   ']],"dragon":[["            ","  /^\\  /^\\  "," <  {E}  {E}  > "," (   ~~   ) ","  `-vvvv-'  "],["            ","  /^\\  /^\\  "," <  {E}  {E}  > "," (        ) ","  `-vvvv-'  "],["   ~    ~   ","  /^\\  /^\\  "," <  {E}  {E}  > "," (   ~~   ) ","  `-vvvv-'  "]],"octopus":[["            ","   .----.   ","  ( {E}  {E} )  ","  (______)  ","  /\\/\\/\\/\\  "],["            ","   .----.   ","  ( {E}  {E} )  ","  (______)  ","  \\/\\/\\/\\/  "],["     o      ","   .----.   ","  ( {E}  {E} )  ","  (______)  ","  /\\/\\/\\/\\  "]],"owl":[["            ","   /\\  /\\   ","  (({E})({E}))  ","  (  ><  )  ","   `----'   "],["            ","   /\\  /\\   ","  (({E})({E}))  ","  (  ><  )  ","   .----.   "],["            ","   /\\  /\\   ","  (({E})(-))  ","  (  ><  )  ","   `----'   "]],"penguin":[["            ","  .---.     ","  ({E}>{E})     "," /(   )\\    ","  `---'     "],["            ","  .---.     ","  ({E}>{E})     "," |(   )|    ","  `---'     "],["  .---.     ","  ({E}>{E})     "," /(   )\\    ","  `---'     ","   ~ ~      "]],"turtle":[["            ","   _,--._   ","  ( {E}  {E} )  "," /[______]\\ ","  ``    ``  "],["            ","   _,--._   ","  ( {E}  {E} )  "," /[______]\\ ","   ``  ``   "],["            ","   _,--._   ","  ( {E}  {E} )  "," /[======]\\ ","  ``    ``  "]],"snail":[["            "," {E}    .--.  ","  \\  ( @ )  ","   \\_`--'   ","  ~~~~~~~   "],["            ","  {E}   .--.  ","  |  ( @ )  ","   \\_`--'   ","  ~~~~~~~   "],["            "," {E}    .--.  ","  \\  ( @  ) ","   \\_`--'   ","   ~~~~~~   "]],"ghost":[["            ","   .----.   ","  / {E}  {E} \\  ","  |      |  ","  ~`~``~`~  "],["            ","   .----.   ","  / {E}  {E} \\  ","  |      |  ","  `~`~~`~`  "],["    ~  ~    ","   .----.   ","  / {E}  {E} \\  ","  |      |  ","  ~~`~~`~~  "]],"axolotl":[["            ","}~(______)~{","}~({E} .. {E})~{","  ( .--. )  ","  (_/  \\_)  "],["            ","~}(______){~","~}({E} .. {E}){~","  ( .--. )  ","  (_/  \\_)  "],["            ","}~(______)~{","}~({E} .. {E})~{","  (  --  )  ","  ~_/  \\_~  "]],"capybara":[["            ","  n______n  "," ( {E}    {E} ) "," (   oo   ) ","  `------'  "],["            ","  n______n  "," ( {E}    {E} ) "," (   Oo   ) ","  `------'  "],["    ~  ~    ","  u______n  "," ( {E}    {E} ) "," (   oo   ) ","  `------'  "]],"cactus":[["            "," n  ____  n "," | |{E}  {E}| | "," |_|    |_| ","   |    |   "],["            ","    ____    "," n |{E}  {E}| n "," |_|    |_| ","   |    |   "],[" n        n "," |  ____  | "," | |{E}  {E}| | "," |_|    |_| ","   |    |   "]],"robot":[["            ","   .[||].   ","  [ {E}  {E} ]  ","  [ ==== ]  ","  `------'  "],["            ","   .[||].   ","  [ {E}  {E} ]  ","  [ -==- ]  ","  `------'  "],["     *      ","   .[||].   ","  [ {E}  {E} ]  ","  [ ==== ]  ","  `------'  "]],"rabbit":[["            ","   (\\__/)   ","  ( {E}  {E} )  "," =(  ..  )= ",'  (")__(")  '],["            ","   (|__/)   ","  ( {E}  {E} )  "," =(  ..  )= ",'  (")__(")  '],["            ","   (\\__/)   ","  ( {E}  {E} )  "," =( .  . )= ",'  (")__(")  ']],"mushroom":[["            "," .-o-OO-o-. ","(__________)","   |{E}  {E}|   ","   |____|   "],["            "," .-O-oo-O-. ","(__________)","   |{E}  {E}|   ","   |____|   "],["   . o  .   "," .-o-OO-o-. ","(__________)","   |{E}  {E}|   ","   |____|   "]],"chonk":[["            ","  /\\    /\\  "," ( {E}    {E} ) "," (   ..   ) ","  `------'  "],["            ","  /\\    /|  "," ( {E}    {E} ) "," (   ..   ) ","  `------'  "],["            ","  /\\    /\\  "," ( {E}    {E} ) "," (   ..   ) ","  `------'~ "]]};
+
+const HAT_ART = {"none":"","crown":"   \\^^^/    ","tophat":"   [___]    ","propeller":"    -+-     ","halo":"   (   )    ","wizard":"    /^\\     ","beanie":"   (___)    ","tinyduck":"    ,>      "};
+
+// Animation sequence: 15 ticks at 500ms each = 7.5s cycle
+// Mostly idle (frame 0), brief flickers to frames 1 and 2
+const ANIM_SEQ = [0,0,0,0,1,0,0,0,2,0,0,2,0,0,0];
+
+let animTick = 0;
+let animTimer = null;
+
+function getAnimFrame() {
+  return ANIM_SEQ[animTick % ANIM_SEQ.length];
+}
+
+function renderSprite(species, eye, hat, frame) {
+  if (frame === undefined) frame = getAnimFrame();
+  const frames = SPRITES[species];
+  if (!frames) return "(?)";
+  const lines = frames[frame].map(l => l.replace(/\{E\}/g, eye));
+  // Inject hat into line 0 if it's blank and hat is set
+  if (hat && hat !== "none" && HAT_ART[hat] && lines[0].trim() === "") {
+    lines[0] = HAT_ART[hat];
+  }
+  return lines.join("\n");
+}
+
+function startAnimation() {
+  if (animTimer) return;
+  animTimer = setInterval(() => {
+    animTick++;
+    // Only re-render sprites, not the whole grid
+    document.querySelectorAll('.buddy .sprite').forEach(el => {
+      const sp = el.dataset.species;
+      const eye = el.dataset.eye;
+      const hat = el.dataset.hat;
+      if (sp) el.textContent = renderSprite(sp, eye, hat);
+    });
+  }, 500);
+}
+
+function stopAnimation() {
+  if (animTimer) { clearInterval(animTimer); animTimer = null; }
+}
+
+// --- Populate species filter ---
+const speciesSelect = document.getElementById('filter-species');
+for (const s of SPECIES) {
+  const opt = document.createElement('option');
+  opt.value = s;
+  opt.textContent = s.charAt(0).toUpperCase() + s.slice(1);
+  speciesSelect.appendChild(opt);
+}
+
+// --- Grid state ---
+let currentIndex = 0n;
+let buddiesPerPage = 60;
+const gridEl = document.getElementById('grid');
+const gridContainer = document.getElementById('grid-container');
+
+function calculateBuddiesPerPage() {
+  const w = gridContainer.clientWidth - 50; // minus scrollbar
+  const h = gridContainer.clientHeight;
+  const cols = Math.floor(w / 146);
+  const rows = Math.floor(h / 120);
+  buddiesPerPage = Math.max(1, cols * rows);
+}
+
+function renderGrid() {
+  calculateBuddiesPerPage();
+  gridEl.innerHTML = '';
+  const end = currentIndex + BigInt(buddiesPerPage);
+
+  const startSalt = saltFromIndex(currentIndex);
+  const endSalt = saltFromIndex(end - 1n < MAX_INDEX ? end - 1n : MAX_INDEX - 1n);
+  document.getElementById('range-start').textContent = startSalt;
+  document.getElementById('range-end').textContent = endSalt;
+
+  for (let i = 0n; i < BigInt(buddiesPerPage); i++) {
+    const idx = currentIndex + i;
+    if (idx >= MAX_INDEX) break;
+    const salt = saltFromIndex(idx);
+    const b = rollSalt(salt);
+    const card = document.createElement('div');
+    card.className = `buddy ${b.rarity}${b.shiny ? ' shiny' : ''}`;
+    const total = Object.values(b.stats).reduce((a, v) => a + v, 0);
+
+    card.innerHTML = `
+      <div class="sprite" data-species="${b.species}" data-eye="${b.eye}" data-hat="${b.hat}">${renderSprite(b.species, b.eye, b.hat, 0)}</div>
+      <div class="info">
+        ${b.species}
+        ${b.hat !== 'none' ? `<span style="opacity:0.5"> · ${b.hat}</span>` : ''}
+        <span class="rarity-tag ${b.rarity}">${STARS[b.rarity]} ${b.rarity}</span>
+        <div class="stats-mini">Σ${total}</div>
+        <div class="seed-num" style="font-family:monospace">${b.salt}</div>
+      </div>
+    `;
+
+    card.addEventListener('click', () => showDetail(b));
+    gridEl.appendChild(card);
+  }
+
+  updateScrollThumb();
+}
+
+// --- Scroll ---
+const track = document.getElementById('scroll-track');
+const thumb = document.getElementById('scroll-thumb');
+let dragging = false;
+
+function updateScrollThumb() {
+  const trackH = track.clientHeight;
+  thumb.style.height = '20px';
+  const ratio = Number((currentIndex * 10000n) / MAX_INDEX) / 10000;
+  thumb.style.top = (ratio * (trackH - 20)) + 'px';
+}
+
+function indexFromTrackY(y) {
+  const trackH = track.clientHeight;
+  const ratio = Math.max(0, Math.min(1, y / (trackH - 20)));
+  return BigInt(Math.floor(ratio * Number(MAX_INDEX / 1000000000000n))) * 1000000000000n;
+}
+
+track.addEventListener('mousedown', (e) => {
+  dragging = true;
+  currentIndex = indexFromTrackY(e.offsetY);
+  renderGrid();
+});
+window.addEventListener('mousemove', (e) => {
+  if (!dragging) return;
+  const rect = track.getBoundingClientRect();
+  currentIndex = indexFromTrackY(e.clientY - rect.top);
+  renderGrid();
+});
+window.addEventListener('mouseup', () => { dragging = false; });
+
+gridContainer.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const delta = BigInt(Math.sign(e.deltaY) * Math.max(1, Math.floor(buddiesPerPage / 4)));
+  let next = currentIndex + delta;
+  if (next < 0n) next = 0n;
+  if (next >= MAX_INDEX) next = MAX_INDEX - BigInt(buddiesPerPage);
+  currentIndex = next;
+  renderGrid();
+}, { passive: false });
+
+// --- Detail panel ---
+const overlay = document.getElementById('detail-overlay');
+const detailCard = document.getElementById('detail-card');
+
+function showDetail(b) {
+  const total = Object.values(b.stats).reduce((a, v) => a + v, 0);
+  const shinyTag = b.shiny ? ' ✨ SHINY' : '';
+
+  let statsHtml = '';
+  for (const s of STAT_NAMES) {
+    const v = b.stats[s];
+    statsHtml += `
+      <div class="stat-row">
+        <div class="stat-name">${s}</div>
+        <div class="stat-bar">
+          <div class="stat-fill" style="width:${v}%;background:${STAT_COLORS[s]}"></div>
+        </div>
+        <div class="stat-val">${v}</div>
+      </div>`;
+  }
+
+  detailCard.innerHTML = `
+    <button class="close" onclick="closeDetail()">&times;</button>
+    <div class="sprite-large" data-species="${b.species}" data-eye="${b.eye}" data-hat="${b.hat}">${renderSprite(b.species, b.eye, b.hat, 0)}</div>
+    <h2>${b.species.charAt(0).toUpperCase() + b.species.slice(1)}</h2>
+    <div class="rarity-large" style="color:${RARITY_COLORS[b.rarity]}">
+      ${STARS[b.rarity]} ${b.rarity.toUpperCase()}${shinyTag}
+    </div>
+    <div style="text-align:center;font-size:12px;color:#666;margin-bottom:12px">
+      Eye: ${b.eye} · Hat: ${b.hat}
+    </div>
+    ${statsHtml}
+    <div style="text-align:center;margin-top:8px;font-size:13px;color:#888">
+      Total: ${total}
+    </div>
+    <div class="meta" style="font-family:monospace">Salt: ${b.salt}</div>
+    <button class="use-btn" onclick="copyCommand('${b.salt}')">Copy install command</button>
+    <div class="meta" style="margin-top:8px;font-size:10px;color:#444;word-break:break-all" id="install-cmd">
+      ./reroll.sh --salt ${b.salt}
+    </div>
+  `;
+  overlay.classList.add('open');
+}
+
+function closeDetail() { overlay.classList.remove('open'); }
+overlay.addEventListener('click', (e) => { if (e.target === overlay) closeDetail(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDetail(); });
+
+function copyCommand(salt) {
+  const cmd = `./reroll.sh --salt ${salt}`;
+  navigator.clipboard.writeText(cmd);
+  const btn = detailCard.querySelector('.use-btn');
+  btn.textContent = 'Copied!';
+  setTimeout(() => { btn.textContent = 'Copy install command'; }, 1500);
+}
+
+// --- Search functions ---
+const searchingEl = document.getElementById('searching');
+let searchAbort = null;
+
+async function findNext(predicate, label) {
+  if (searchAbort) return;
+  const dir = document.getElementById('search-dir').value;
+  const step = dir === 'forward' ? 1n : -1n;
+  let idx = currentIndex + step;
+  searchAbort = true;
+  searchingEl.textContent = `Searching ${dir} for ${label}...`;
+  searchingEl.classList.add('active');
+
+  const batchSize = 5000; // smaller batches - wyhash is slower than mulberry32
+  let checked = 0;
+  const maxCheck = 2000000; // cap at 2M to avoid freezing
+
+  while (checked < maxCheck) {
+    for (let i = 0; i < batchSize && checked < maxCheck; i++, checked++) {
+      if (idx < 0n || idx >= MAX_INDEX) { idx = (idx + MAX_INDEX) % MAX_INDEX; }
+      const salt = saltFromIndex(idx);
+      const b = rollSalt(salt);
+      if (predicate(b)) {
+        currentIndex = idx;
+        renderGrid();
+        searchingEl.classList.remove('active');
+        searchAbort = null;
+        showDetail(b);
+        return;
+      }
+      idx += step;
+    }
+    searchingEl.textContent = `Searching ${dir} for ${label}... (${checked.toLocaleString()} checked)`;
+    await new Promise(r => setTimeout(r, 0)); // yield to UI
+  }
+
+  searchingEl.textContent = 'Not found in 2M salts — try again from a different position';
+  setTimeout(() => searchingEl.classList.remove('active'), 3000);
+  searchAbort = null;
+}
+
+function getSpeciesFilter() {
+  return document.getElementById('filter-species').value || null;
+}
+
+document.getElementById('btn-legendary').addEventListener('click', () => {
+  const sp = getSpeciesFilter();
+  findNext(b => b.rarity === 'legendary' && (!sp || b.species === sp),
+    `legendary${sp ? ' ' + sp : ''}`);
+});
+
+document.getElementById('btn-epic').addEventListener('click', () => {
+  const sp = getSpeciesFilter();
+  findNext(b => b.rarity === 'epic' && (!sp || b.species === sp),
+    `epic${sp ? ' ' + sp : ''}`);
+});
+
+document.getElementById('btn-rare').addEventListener('click', () => {
+  const sp = getSpeciesFilter();
+  findNext(b => b.rarity === 'rare' && (!sp || b.species === sp),
+    `rare${sp ? ' ' + sp : ''}`);
+});
+
+document.getElementById('btn-shiny').addEventListener('click', () => {
+  const sp = getSpeciesFilter();
+  findNext(b => b.shiny && (!sp || b.species === sp),
+    `shiny${sp ? ' ' + sp : ''}`);
+});
+
+// --- Jump ---
+document.getElementById('btn-jump').addEventListener('click', () => {
+  const val = document.getElementById('jump-seed').value.trim().toLowerCase();
+  if (val) {
+    const padded = val.padStart(SALT_LEN, '0').slice(0, SALT_LEN);
+    currentIndex = indexFromSalt(padded);
+    renderGrid();
+  }
+});
+document.getElementById('jump-seed').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('btn-jump').click();
+});
+
+document.getElementById('btn-random').addEventListener('click', () => {
+  // Random BigInt in [0, MAX_INDEX)
+  let idx = 0n;
+  for (let i = 0; i < SALT_LEN; i++) {
+    idx = idx * BASE + BigInt(Math.floor(Math.random() * 37));
+  }
+  currentIndex = idx;
+  renderGrid();
+});
+
+// --- Keyboard nav ---
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (overlay.classList.contains('open')) return;
+  const page = BigInt(buddiesPerPage);
+
+  switch (e.key) {
+    case 'ArrowRight':
+    case 'ArrowDown':
+      e.preventDefault();
+      currentIndex = currentIndex + page < MAX_INDEX ? currentIndex + page : MAX_INDEX - page;
+      renderGrid();
+      break;
+    case 'ArrowLeft':
+    case 'ArrowUp':
+      e.preventDefault();
+      currentIndex = currentIndex >= page ? currentIndex - page : 0n;
+      renderGrid();
+      break;
+    case 'Home':
+      currentIndex = 0n;
+      renderGrid();
+      break;
+    case 'End':
+      currentIndex = MAX_INDEX - page;
+      renderGrid();
+      break;
+  }
+});
+
+// --- Setup modal ---
+const setupOverlay = document.getElementById('setup-overlay');
+const setupInput = document.getElementById('setup-uid');
+const setupGo = document.getElementById('setup-go');
+
+document.getElementById('setup-cmd').addEventListener('click', () => {
+  const cmd = document.getElementById('setup-cmd').textContent;
+  navigator.clipboard.writeText(cmd).then(() => {
+    document.getElementById('setup-cmd').style.borderColor = '#22c55e';
+    setTimeout(() => { document.getElementById('setup-cmd').style.borderColor = '#333'; }, 1000);
+  });
+});
+
+setupInput.addEventListener('input', () => {
+  setupGo.disabled = !setupInput.value.trim().match(/^[0-9a-f-]{20,}$/i);
+});
+
+setupGo.addEventListener('click', () => {
+  const uid = setupInput.value.trim();
+  if (!uid) return;
+  document.getElementById('user-id-input').value = uid;
+  _prefixBytes = _encoder.encode(uid);
+  localStorage.setItem('buddy-uid', uid);
+  setupOverlay.classList.add('hidden');
+  renderGrid();
+  startAnimation();
+});
+
+setupInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !setupGo.disabled) setupGo.click();
+});
+
+// --- Help button ---
+document.getElementById('btn-help-uid').addEventListener('click', () => {
+  setupOverlay.classList.remove('hidden');
+  setupInput.focus();
+});
+
+// --- Init ---
+window.addEventListener('resize', () => renderGrid());
+document.getElementById('user-id-input').addEventListener('change', () => {
+  _prefixBytes = _encoder.encode(getUserId());
+  localStorage.setItem('buddy-uid', getUserId());
+  renderGrid();
+});
+
+// Check for saved user ID
+const savedUid = localStorage.getItem('buddy-uid');
+if (savedUid) {
+  document.getElementById('user-id-input').value = savedUid;
+  setupInput.value = savedUid;
+  _prefixBytes = _encoder.encode(savedUid);
+  setupOverlay.classList.add('hidden');
+  renderGrid();
+  startAnimation();
+} else {
+  setupInput.focus();
+}
+</script>
+</body>
+</html>

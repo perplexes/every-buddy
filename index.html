@@ -18,30 +18,34 @@
 
   /* --- Header --- */
   header {
-    padding: 12px 20px;
+    padding: 10px 16px;
     background: #111118;
     border-bottom: 1px solid #222;
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
     flex-shrink: 0;
+    flex-wrap: wrap;
   }
-  header h1 { font-size: 16px; font-weight: 600; white-space: nowrap; }
-  header h1 span { opacity: 0.4; font-weight: 400; }
+  header h1 { font-size: 15px; font-weight: 600; white-space: nowrap; }
+  header h1 span { opacity: 0.4; font-weight: 400; display: none; }
+  @media (min-width: 600px) { header h1 span { display: inline; } }
   .seed-display {
-    font-size: 13px;
+    font-size: 12px;
     color: #888;
     font-variant-numeric: tabular-nums;
+    display: none;
   }
+  @media (min-width: 800px) { .seed-display { display: block; } }
   .seed-display b { color: #ccc; }
 
   /* --- Search bar --- */
   .search-bar {
-    padding: 8px 20px;
+    padding: 8px 12px;
     background: #0d0d14;
     border-bottom: 1px solid #1a1a25;
     display: flex;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
     align-items: center;
     flex-shrink: 0;
@@ -74,7 +78,8 @@
     font-size: 12px;
   }
   .search-bar label { font-size: 12px; color: #666; }
-  .separator { width: 1px; height: 20px; background: #333; }
+  .separator { width: 1px; height: 20px; background: #333; display: none; }
+  @media (min-width: 800px) { .separator { display: block; } }
 
   /* --- Main grid --- */
   .grid-container {
@@ -84,10 +89,13 @@
   }
   #grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, 140px);
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     gap: 6px;
-    padding: 12px 20px;
+    padding: 8px;
     justify-content: center;
+  }
+  @media (min-width: 600px) {
+    #grid { grid-template-columns: repeat(auto-fill, 140px); padding: 12px 20px; }
   }
 
   /* --- Buddy card --- */
@@ -162,7 +170,9 @@
     background: #0a0a0f;
     border-left: 1px solid #222;
     cursor: pointer;
+    display: none;
   }
+  @media (min-width: 600px) { .scroll-track { display: block; } }
   .scroll-thumb {
     position: absolute;
     right: 4px;
@@ -198,10 +208,12 @@
     background: #111118;
     border: 1px solid #333;
     border-radius: 12px;
-    padding: 24px;
-    min-width: 320px;
+    padding: 20px;
+    width: 90%;
     max-width: 400px;
     position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
   }
   .detail-card .close {
     position: absolute;
@@ -359,12 +371,12 @@
   <div class="seed-display">
     Salt <b id="range-start" style="font-family:monospace">000000000000000</b> – <b id="range-end" style="font-family:monospace">000000000000000</b>
   </div>
-  <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
-    <label style="font-size:11px;color:#666">User ID:</label>
-    <input type="text" id="user-id-input" value="" placeholder="paste your accountUuid here"
-      style="font-family:monospace;font-size:11px;width:300px;padding:3px 6px;background:#1a1a25;border:1px solid #333;border-radius:3px;color:#ccc">
+  <div style="margin-left:auto;display:flex;align-items:center;gap:6px;min-width:0">
+    <label style="font-size:11px;color:#666;white-space:nowrap">User ID:</label>
+    <input type="text" id="user-id-input" value="" placeholder="accountUuid"
+      style="font-family:monospace;font-size:11px;width:100%;max-width:300px;min-width:80px;padding:3px 6px;background:#1a1a25;border:1px solid #333;border-radius:3px;color:#ccc">
     <button id="btn-help-uid"
-      style="background:none;border:1px solid #444;border-radius:50%;width:18px;height:18px;color:#666;font-size:11px;cursor:pointer;padding:0;line-height:18px" title="How to find your User ID">?</button>
+      style="background:none;border:1px solid #444;border-radius:50%;width:18px;height:18px;color:#666;font-size:11px;cursor:pointer;padding:0;line-height:18px;flex-shrink:0" title="How to find your User ID">?</button>
   </div>
 </header>
 
@@ -434,11 +446,13 @@
 <div class="setup-overlay" id="setup-overlay">
   <div class="setup-card">
     <h2>Every Buddy</h2>
-    <p>Browse all possible Claude Code companion pets. To see <em>your</em> rolls, paste your <strong>accountUuid</strong>.</p>
-    <p>Run this in your terminal to get it:</p>
+    <p>Browse all 37<sup>15</sup> possible <a href="https://docs.anthropic.com/en/docs/claude-code" style="color:#3b82f6">Claude Code</a> companion pets.</p>
+    <p>To see <em>your</em> rolls, paste your <strong>accountUuid</strong>:</p>
     <code id="setup-cmd">python3 -c "import json,os; print(json.load(open(os.path.expanduser('~/.claude.json')))['oauthAccount']['accountUuid'])"</code>
-    <input type="text" id="setup-uid" placeholder="paste your accountUuid here (e.g. a1b2c3d4-...)" autocomplete="off" spellcheck="false">
-    <button class="go-btn" id="setup-go" disabled>Explore</button>
+    <input type="text" id="setup-uid" placeholder="paste your accountUuid (e.g. a1b2c3d4-...)" autocomplete="off" spellcheck="false">
+    <button class="go-btn" id="setup-go" disabled>Explore My Buddies</button>
+    <div style="text-align:center;margin:16px 0 0;color:#555;font-size:12px">— or —</div>
+    <button class="go-btn" id="setup-random" style="margin-top:12px;border-color:#555;color:#888">Just Browsing (random ID)</button>
   </div>
 </div>
 
@@ -723,6 +737,22 @@ window.addEventListener('mousemove', (e) => {
 });
 window.addEventListener('mouseup', () => { dragging = false; });
 
+// Touch scroll for mobile
+let touchStartY = 0;
+gridContainer.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; }, { passive: true });
+gridContainer.addEventListener('touchmove', (e) => {
+  const dy = touchStartY - e.touches[0].clientY;
+  touchStartY = e.touches[0].clientY;
+  if (Math.abs(dy) > 5) {
+    const delta = BigInt(Math.sign(dy) * Math.max(1, Math.floor(buddiesPerPage / 6)));
+    let next = currentIndex + delta;
+    if (next < 0n) next = 0n;
+    if (next >= MAX_INDEX) next = MAX_INDEX - BigInt(buddiesPerPage);
+    currentIndex = next;
+    renderGrid();
+  }
+}, { passive: true });
+
 gridContainer.addEventListener('wheel', (e) => {
   e.preventDefault();
   const delta = BigInt(Math.sign(e.deltaY) * Math.max(1, Math.floor(buddiesPerPage / 4)));
@@ -970,15 +1000,27 @@ setupInput.addEventListener('input', () => {
   setupGo.disabled = !setupInput.value.trim().match(/^[0-9a-f-]{20,}$/i);
 });
 
-setupGo.addEventListener('click', () => {
-  const uid = setupInput.value.trim();
-  if (!uid) return;
+function activateWithUid(uid) {
   document.getElementById('user-id-input').value = uid;
   _prefixBytes = _encoder.encode(uid);
   localStorage.setItem('buddy-uid', uid);
   setupOverlay.classList.add('hidden');
   renderGrid();
   startAnimation();
+}
+
+setupGo.addEventListener('click', () => {
+  const uid = setupInput.value.trim();
+  if (!uid) return;
+  activateWithUid(uid);
+});
+
+document.getElementById('setup-random').addEventListener('click', () => {
+  // Generate a random UUID v4
+  const hex = () => Math.floor(Math.random() * 16).toString(16);
+  const s = (n) => Array.from({length: n}, hex).join('');
+  const uid = `${s(8)}-${s(4)}-4${s(3)}-${hex()/*8-b*/}${s(3)}-${s(12)}`;
+  activateWithUid(uid);
 });
 
 setupInput.addEventListener('keydown', (e) => {

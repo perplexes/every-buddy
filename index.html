@@ -378,6 +378,29 @@
   <select id="filter-species">
     <option value="">Any</option>
   </select>
+  <label>Hat:</label>
+  <select id="filter-hat">
+    <option value="">Any</option>
+    <option value="none">None</option>
+    <option value="crown">Crown</option>
+    <option value="tophat">Tophat</option>
+    <option value="propeller">Propeller</option>
+    <option value="halo">Halo</option>
+    <option value="wizard">Wizard</option>
+    <option value="beanie">Beanie</option>
+    <option value="tinyduck">Tinyduck</option>
+  </select>
+  <label>Eye:</label>
+  <select id="filter-eye">
+    <option value="">Any</option>
+    <option value="·">· dot</option>
+    <option value="✦">✦ star</option>
+    <option value="×">× x</option>
+    <option value="◉">◉ circle</option>
+    <option value="@">@ at</option>
+    <option value="°">° degree</option>
+  </select>
+  <div class="separator"></div>
   <label>Direction:</label>
   <select id="search-dir">
     <option value="forward">Forward →</option>
@@ -390,9 +413,22 @@
     <button id="btn-jump">Go</button>
   </div>
   <div class="jump-group">
-    <label>Random:</label>
     <button id="btn-random">🎲</button>
   </div>
+</div>
+<div class="search-bar" style="border-top:none;padding-top:0">
+  <label style="color:#888;font-size:11px">Require shiny:</label>
+  <input type="checkbox" id="filter-shiny">
+  <div class="separator"></div>
+  <label>Min total:</label>
+  <input type="number" id="filter-min-total" min="0" max="500" placeholder="0" style="width:50px">
+  <div class="separator"></div>
+  <label>Min stats:</label>
+  <label style="color:#ef4444">dbg≥</label><input type="number" class="min-stat" data-stat="debugging" min="0" max="100" placeholder="0" style="width:40px">
+  <label style="color:#22c55e">pat≥</label><input type="number" class="min-stat" data-stat="patience" min="0" max="100" placeholder="0" style="width:40px">
+  <label style="color:#f97316">cha≥</label><input type="number" class="min-stat" data-stat="chaos" min="0" max="100" placeholder="0" style="width:40px">
+  <label style="color:#3b82f6">wis≥</label><input type="number" class="min-stat" data-stat="wisdom" min="0" max="100" placeholder="0" style="width:40px">
+  <label style="color:#a855f7">snk≥</label><input type="number" class="min-stat" data-stat="snark" min="0" max="100" placeholder="0" style="width:40px">
 </div>
 
 <div class="setup-overlay" id="setup-overlay">
@@ -794,32 +830,64 @@ async function findNext(predicate, label) {
   searchAbort = null;
 }
 
-function getSpeciesFilter() {
-  return document.getElementById('filter-species').value || null;
+// --- Filter helpers ---
+function getFilters() {
+  const sp = document.getElementById('filter-species').value || null;
+  const hat = document.getElementById('filter-hat').value || null;
+  const eye = document.getElementById('filter-eye').value || null;
+  const shiny = document.getElementById('filter-shiny').checked;
+  const minTotal = parseInt(document.getElementById('filter-min-total').value) || 0;
+  const minStats = {};
+  for (const el of document.querySelectorAll('.min-stat')) {
+    const v = parseInt(el.value) || 0;
+    if (v > 0) minStats[el.dataset.stat] = v;
+  }
+  return { sp, hat, eye, shiny, minTotal, minStats };
+}
+
+function matchesFilters(b, extra = {}) {
+  const f = getFilters();
+  if (extra.rarity && b.rarity !== extra.rarity) return false;
+  if (extra.shinyRequired && !b.shiny) return false;
+  if (f.sp && b.species !== f.sp) return false;
+  if (f.hat && b.hat !== f.hat) return false;
+  if (f.eye && b.eye !== f.eye) return false;
+  if (f.shiny && !b.shiny) return false;
+  const total = Object.values(b.stats).reduce((a, v) => a + v, 0);
+  if (total < f.minTotal) return false;
+  for (const [k, v] of Object.entries(f.minStats)) {
+    if (b.stats[k] < v) return false;
+  }
+  return true;
+}
+
+function filterLabel(extra = {}) {
+  const f = getFilters();
+  const parts = [];
+  if (f.shiny || extra.shinyRequired) parts.push('shiny');
+  if (extra.rarity) parts.push(extra.rarity);
+  if (f.sp) parts.push(f.sp);
+  if (f.hat) parts.push(`hat:${f.hat}`);
+  if (f.eye) parts.push(`eye:${f.eye}`);
+  if (f.minTotal) parts.push(`Σ≥${f.minTotal}`);
+  for (const [k, v] of Object.entries(f.minStats)) parts.push(`${k}≥${v}`);
+  return parts.join(' ') || 'match';
 }
 
 document.getElementById('btn-legendary').addEventListener('click', () => {
-  const sp = getSpeciesFilter();
-  findNext(b => b.rarity === 'legendary' && (!sp || b.species === sp),
-    `legendary${sp ? ' ' + sp : ''}`);
+  findNext(b => matchesFilters(b, { rarity: 'legendary' }), filterLabel({ rarity: 'legendary' }));
 });
 
 document.getElementById('btn-epic').addEventListener('click', () => {
-  const sp = getSpeciesFilter();
-  findNext(b => b.rarity === 'epic' && (!sp || b.species === sp),
-    `epic${sp ? ' ' + sp : ''}`);
+  findNext(b => matchesFilters(b, { rarity: 'epic' }), filterLabel({ rarity: 'epic' }));
 });
 
 document.getElementById('btn-rare').addEventListener('click', () => {
-  const sp = getSpeciesFilter();
-  findNext(b => b.rarity === 'rare' && (!sp || b.species === sp),
-    `rare${sp ? ' ' + sp : ''}`);
+  findNext(b => matchesFilters(b, { rarity: 'rare' }), filterLabel({ rarity: 'rare' }));
 });
 
 document.getElementById('btn-shiny').addEventListener('click', () => {
-  const sp = getSpeciesFilter();
-  findNext(b => b.shiny && (!sp || b.species === sp),
-    `shiny${sp ? ' ' + sp : ''}`);
+  findNext(b => matchesFilters(b, { shinyRequired: true }), filterLabel({ shinyRequired: true }));
 });
 
 // --- Jump ---

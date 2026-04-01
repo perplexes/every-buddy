@@ -1,7 +1,10 @@
 // Brute-force a buddy salt with filters using actual Bun.hash
 //
 // Usage:
-//   bun reroll_bruteforce.js [rarity] [flags]
+//   bun reroll_bruteforce.js --user <uuid> [rarity] [flags]
+//
+// Required:
+//   --user <uuid>            User ID (accountUuid from ~/.claude.json)
 //
 // Rarity (default: legendary):
 //   common | uncommon | rare | epic | legendary
@@ -24,16 +27,19 @@
 //   --max-attempts <n>       Max attempts (default 10,000,000)
 //
 // Examples:
-//   bun reroll_bruteforce.js legendary --shiny
-//   bun reroll_bruteforce.js legendary --shiny --species dragon --min-stat debugging:90
-//   bun reroll_bruteforce.js epic --min-total 400 --species ghost
-//   bun reroll_bruteforce.js legendary --hat crown --eye ✦ --min-stat chaos:80
+//   bun reroll_bruteforce.js --user abc123 legendary --shiny
+//   bun reroll_bruteforce.js --user abc123 legendary --shiny --species dragon --min-stat debugging:90
+//   bun reroll_bruteforce.js --user abc123 epic --min-total 400 --species ghost
+//   bun reroll_bruteforce.js --user abc123 legendary --hat crown --eye ✦ --min-stat chaos:80
 
 if (process.argv.includes("-h") || process.argv.includes("--help")) {
     console.log(`Claude Code Buddy Re-roller (brute-force engine)
 
 Usage:
-  bun reroll_bruteforce.js [rarity] [flags]
+  bun reroll_bruteforce.js --user <uuid> [rarity] [flags]
+
+Required:
+  --user <uuid>            User ID (accountUuid from ~/.claude.json)
 
 Rarity (default: legendary):
   common | uncommon | rare | epic | legendary
@@ -60,30 +66,21 @@ Flags:
                            Does not patch — just prints a leaderboard.
 
 Examples:
-  bun reroll_bruteforce.js legendary --shiny
-  bun reroll_bruteforce.js legendary --shiny --species dragon --min-stat debugging:90
-  bun reroll_bruteforce.js epic --min-total 400 --species ghost
-  bun reroll_bruteforce.js legendary --hat crown --eye ✦ --min-stat chaos:80
-  bun reroll_bruteforce.js legendary --shiny --survey 50`);
+  bun reroll_bruteforce.js --user abc123 legendary --shiny
+  bun reroll_bruteforce.js --user abc123 legendary --shiny --species dragon --min-stat debugging:90
+  bun reroll_bruteforce.js --user abc123 epic --min-total 400 --species ghost
+  bun reroll_bruteforce.js --user abc123 legendary --hat crown --eye ✦ --min-stat chaos:80
+  bun reroll_bruteforce.js --user abc123 legendary --shiny --survey 50`);
     process.exit(0);
 }
 
-// Read user ID from ~/.claude.json
-import { readFileSync } from "fs";
-import { homedir } from "os";
-import { join } from "path";
-
-function loadUserId() {
-  try {
-    const cfg = JSON.parse(readFileSync(join(homedir(), ".claude.json"), "utf-8"));
-    return cfg.oauthAccount?.accountUuid ?? cfg.userID ?? "anon";
-  } catch {
-    console.error("Could not read ~/.claude.json — make sure Claude Code is installed and you've logged in.");
-    process.exit(1);
-  }
+// Parse --user flag (required)
+const userIdx = process.argv.indexOf("--user");
+if (userIdx < 0 || userIdx + 1 >= process.argv.length) {
+  console.error("Error: --user <uuid> is required.\nUsage: bun reroll_bruteforce.js --user <uuid> [rarity] [flags]");
+  process.exit(1);
 }
-
-const USER_ID = loadUserId();
+const USER_ID = process.argv[userIdx + 1];
 const ORIGINAL_SALT = "friend-2026-401";
 const SALT_LEN = ORIGINAL_SALT.length; // 15
 

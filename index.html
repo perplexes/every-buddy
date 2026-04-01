@@ -770,8 +770,8 @@ function showDetail(b) {
     </div>
     <div class="meta" style="font-family:monospace">Salt: ${b.salt}</div>
     <button class="use-btn" onclick="copyCommand('${b.salt}')">Copy install command</button>
-    <div class="meta" style="margin-top:8px;font-size:10px;color:#444;word-break:break-all" id="install-cmd">
-      ./reroll.sh --salt ${b.salt}
+    <div class="meta" style="margin-top:8px;font-size:10px;color:#555;word-break:break-all;font-family:monospace;line-height:1.6" id="install-cmd">
+      curl -sL https://raw.githubusercontent.com/perplexes/every-buddy/main/reroll.sh | bash -s -- --salt ${b.salt}
     </div>
   `;
   overlay.classList.add('open');
@@ -782,7 +782,7 @@ overlay.addEventListener('click', (e) => { if (e.target === overlay) closeDetail
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDetail(); });
 
 function copyCommand(salt) {
-  const cmd = `./reroll.sh --salt ${salt}`;
+  const cmd = `curl -sL https://raw.githubusercontent.com/perplexes/every-buddy/main/reroll.sh | bash -s -- --salt ${salt}`;
   navigator.clipboard.writeText(cmd);
   const btn = detailCard.querySelector('.use-btn');
   btn.textContent = 'Copied!';

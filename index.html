@@ -802,12 +802,12 @@ async function findNext(predicate, label) {
   searchingEl.textContent = `Searching ${dir} for ${label}...`;
   searchingEl.classList.add('active');
 
-  const batchSize = 5000; // smaller batches - wyhash is slower than mulberry32
+  const batchSize = 5000;
   let checked = 0;
-  const maxCheck = 2000000; // cap at 2M to avoid freezing
+  let limit = 10_000_000;
 
-  while (checked < maxCheck) {
-    for (let i = 0; i < batchSize && checked < maxCheck; i++, checked++) {
+  while (checked < limit) {
+    for (let i = 0; i < batchSize && checked < limit; i++, checked++) {
       if (idx < 0n || idx >= MAX_INDEX) { idx = (idx + MAX_INDEX) % MAX_INDEX; }
       const salt = saltFromIndex(idx);
       const b = rollSalt(salt);
@@ -821,11 +821,21 @@ async function findNext(predicate, label) {
       }
       idx += step;
     }
-    searchingEl.textContent = `Searching ${dir} for ${label}... (${checked.toLocaleString()} checked)`;
-    await new Promise(r => setTimeout(r, 0)); // yield to UI
+    searchingEl.textContent = `Searching ${dir} for ${label}... (${(checked / 1e6).toFixed(1)}M checked)`;
+    await new Promise(r => setTimeout(r, 0));
+
+    if (checked >= limit && limit < 100_000_000) {
+      if (confirm(`Searched ${(limit / 1e6).toFixed(0)}M salts without a match. Keep searching up to 100M?`)) {
+        limit = 100_000_000;
+      } else {
+        break;
+      }
+    }
   }
 
-  searchingEl.textContent = 'Not found in 2M salts — try again from a different position';
+  searchingEl.textContent = checked >= 100_000_000
+    ? 'Not found in 100M salts. Try loosening filters or a different position.'
+    : 'Search cancelled.';
   setTimeout(() => searchingEl.classList.remove('active'), 3000);
   searchAbort = null;
 }
